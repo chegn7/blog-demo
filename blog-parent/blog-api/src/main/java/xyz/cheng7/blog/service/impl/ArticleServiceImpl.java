@@ -7,6 +7,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import xyz.cheng7.blog.dao.Event;
@@ -28,6 +29,7 @@ import xyz.cheng7.blog.vo.params.PageParams;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -106,12 +108,11 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
                 redisValue = (String) redisTemplate.opsForValue().get(redisKey);
                 if (null == redisValue) {
                     log.info("从DB查询热帖");
-                    List<Article> hotArticles = new ArrayList<>();
+                    articleVos = new ArrayList<>();
                     List<Long> ids = articleViewCountsService.getHotArticleId(limit);
                     for (Long id : ids) {
-                        hotArticles.add(getArticleById(id));
+                        articleVos.add(getArticleVo(id, false, false, false, false));
                     }
-                    articleVos = recordsToList(hotArticles, false, false);
                     redisValue = JSONUtil.getInstance().toJSON(articleVos);
                     redisTemplate.opsForValue().set(redisKey, redisValue, articleRedisExpireTime, TimeUnit.SECONDS);
                 }
@@ -127,12 +128,13 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
 
     @Override
     public List<ArticleVo> newArticle(int limit) {
-        List<Article> newArticles = null;
-        newArticles = articleMapper.selectNewArticle(limit);
-        if (CollectionUtils.isEmpty(newArticles)) {
-            return Collections.emptyList();
+        List<ArticleVo> articleVos = new ArrayList<>();
+        List<Long> ids = this.getNewIds(limit);
+        for (Long id : ids) {
+            ArticleVo articleVo = getArticleVo(id, false, false, false, false);
+            articleVos.add(articleVo);
         }
-        return recordsToList(newArticles, false, false);
+        return articleVos;
     }
 
     @Override
@@ -215,6 +217,32 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
         return articleVo;
     }
 
+    @Override
+    public List<Long> getNewIds(int limit) {
+        List<Long> ids = new ArrayList<>();
+        String redisKey = RedisUtil.getNewArticleIds();
+        Set<ZSetOperations.TypedTuple<String>> set = redisTemplate.opsForZSet().reverseRangeWithScores(redisKey, 0, limit - 1);
+        if (null == set || set.size() == 0) {
+            synchronized (this) {
+                set = redisTemplate.opsForZSet().reverseRange(redisKey, 0, -1);
+                if (null == set || set.size() == 0) {
+                    List<Article> newArticles = articleMapper.selectNew(limit);
+                    for (Article newArticle : newArticles) {
+                        ids.add(newArticle.getId());
+                        redisTemplate.opsForZSet().add(redisKey, newArticle.getId().toString(), newArticle.getCreateDate());
+                    }
+                    return ids;
+                }
+            }
+        }
+        if (null != set) {
+            for (ZSetOperations.TypedTuple<String> tuple : set) {
+                ids.add(Long.valueOf(tuple.getValue()));
+            }
+        }
+        return ids;
+    }
+
     private int insertArticle(Article article) {
         return articleMapper.insert(article);
     }
@@ -259,58 +287,82 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
     // 不是所有的article都需要tag和author，因此加入两个is参数
     private ArticleVo pojoToVo(Article article, boolean isTag, boolean isAuthor, boolean isBody, boolean isCategory) {
         ArticleVo articleVo = null;
-        articleVo = new ArticleVo();
-
-        BeanUtils.copyProperties(article, articleVo);
-        Long articleId = article.getId();
-        articleVo.setId(String.valueOf(articleId));
-        Long createDate = article.getCreateDate();
-        if (createDate != null) {
-            articleVo.setCreateDate(new DateTime(createDate).toString("yyyy-MM-dd HH:mm:ss"));
-        }
-        if (isTag) {
-            articleVo.setTags(tagService.findTagsByArticleId(articleId));
-        }
-        if (isAuthor) {
-            Long authorId = article.getAuthorId();
-            SysUserVo userVo = sysUserService.findSysUser(authorId);
-            articleVo.setAuthor(userVo.getNickname());
-        }
-        if (isBody) {
-            Long bodyId = article.getBodyId();
-            ArticleBody articleBody = articleBodyService.findArticleBodyByBodyId(bodyId);
-            if (null != articleBody) {
-                ArticleBodyVo articleBodyVo = new ArticleBodyVo(articleBody);
-                articleVo.setBody(articleBodyVo);
-            }
-        }
-        if (isCategory) {
-            Long categoryId = article.getCategoryId().longValue();
-            Category category = categoryService.findCategoryById(categoryId);
-            if (null != category) {
-                CategoryVo categoryVo = new CategoryVo(category);
-                articleVo.setCategory(categoryVo);
+        String redisKey = RedisUtil.getArticleVo(article.getId(), isTag, isAuthor, isBody, isCategory);
+        String redisValue = (String) redisTemplate.opsForValue().get(redisKey);
+        if (null == redisValue) {
+            synchronized (this) {
+                redisValue = (String) redisTemplate.opsForValue().get(redisKey);
+                if (null == redisValue) {
+                    articleVo = new ArticleVo();
+                    BeanUtils.copyProperties(article, articleVo);
+                    Long articleId = article.getId();
+                    articleVo.setId(String.valueOf(articleId));
+                    Long createDate = article.getCreateDate();
+                    if (createDate != null) {
+                        articleVo.setCreateDate(new DateTime(createDate).toString("yyyy-MM-dd HH:mm:ss"));
+                    }
+                    if (isTag) {
+                        articleVo.setTags(tagService.findTagsByArticleId(articleId));
+                    }
+                    if (isAuthor) {
+                        Long authorId = article.getAuthorId();
+                        SysUserVo userVo = sysUserService.findSysUser(authorId);
+                        articleVo.setAuthor(userVo.getNickname());
+                    }
+                    if (isBody) {
+                        Long bodyId = article.getBodyId();
+                        ArticleBody articleBody = articleBodyService.findArticleBodyByBodyId(bodyId);
+                        if (null != articleBody) {
+                            ArticleBodyVo articleBodyVo = new ArticleBodyVo(articleBody);
+                            articleVo.setBody(articleBodyVo);
+                        }
+                    }
+                    if (isCategory) {
+                        Long categoryId = article.getCategoryId().longValue();
+                        Category category = categoryService.findCategoryById(categoryId);
+                        if (null != category) {
+                            CategoryVo categoryVo = new CategoryVo(category);
+                            articleVo.setCategory(categoryVo);
 //                List<CategoryVo> categoryVos = new ArrayList<>();
 //                categoryVos.add(categoryVo);
 //                articleVo.setCategories(categoryVos);
+                        }
+                    }
+                    redisValue = JSONUtil.getInstance().toJSON(articleVo);
+                    redisTemplate.opsForValue().set(redisKey, redisValue, articleRedisExpireTime, TimeUnit.SECONDS);
+                }
             }
         }
-
+        if (articleVo == null && redisValue != null) {
+            articleVo = JSONUtil.getInstance().toObject(redisValue, ArticleVo.class);
+        }
         articleVo.setViewCounts(articleViewCountsService.getArticleViewCounts(article.getId()));
         return articleVo;
     }
 
     private Article getArticleById(Long articleId) {
-        Article article;
-        Integer viewCounts = getArticleViewCounts(articleId);
-        article = articleMapper.selectById(articleId);
-        if (null != article) article.setViewCounts(viewCounts);
+        Article article = null;
+        String redisKey = RedisUtil.getArticleAbstract(articleId);
+        String redisValue = (String) redisTemplate.opsForValue().get(redisKey);
+        if (null == redisValue) {
+            synchronized (this) {
+                redisValue = (String) redisTemplate.opsForValue().get(redisKey);
+                if (null == redisValue) {
+                    article = articleMapper.selectById(articleId);
+                    redisValue = JSONUtil.getInstance().toJSON(article);
+                    redisTemplate.opsForValue().set(redisKey, redisValue, articleRedisExpireTime, TimeUnit.SECONDS);
+                }
+            }
+        }
+        if (article == null && redisValue != null) {
+            article = JSONUtil.getInstance().toObject(redisValue, Article.class);
+        }
         return article;
     }
 
-    private Integer getArticleViewCounts(Long articleId) {
-        Integer viewCounts = articleViewCountsService.getArticleViewCounts(articleId);
-        return viewCounts;
+    private ArticleVo getArticleVo(Long articleId, boolean isTag, boolean isAuthor, boolean isBody, boolean isCategory) {
+        Article article = this.getArticleById(articleId);
+        return pojoToVo(article, isTag, isAuthor, isBody, isCategory);
     }
 }
 

@@ -30,4 +30,6 @@ public interface ArticleService extends IService<Article> {
 
     @Transactional
     ArticleVo publish(ArticleParam articleParam);
+
+    List<Long> getNewIds(int limit);
 }

@@ -29,6 +29,10 @@ public interface ArticleMapper extends BaseMapper<Article> {
     int countArticle(ArticleSelectParam selectParam);
 
     List<Article> selectArticle(ArticleSelectParam selectParam);
+
+    List<Long> selectNewIds(int limit);
+
+    List<Article> selectNew(int limit);
 }
 
 

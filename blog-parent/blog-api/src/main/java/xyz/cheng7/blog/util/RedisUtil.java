@@ -53,4 +53,8 @@ public class RedisUtil {
     public static String getSplit() {
         return SPLIT;
     }
+
+    public static String getDeleteNewIdLock() {
+        return String.join(SPLIT, "lock", "delete", "articleId", "new");
+    }
 }

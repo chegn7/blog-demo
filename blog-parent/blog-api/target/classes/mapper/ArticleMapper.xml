@@ -107,4 +107,16 @@
             limit #{limit} offset #{offset}
         </if>
     </select>
+    <select id="selectNewIds" parameterType="int" resultType="java.lang.Long">
+        select id
+        from ms_article
+        order by create_date desc
+        limit #{limit}
+    </select>
+    <select id="selectNew" parameterType="int" resultType="xyz.cheng7.blog.dao.pojo.Article">
+        select id, create_date
+        from ms_article
+        order by create_date desc
+        limit #{limit}
+    </select>
 </mapper>

@@ -19,7 +19,7 @@ import java.util.List;
 public class ArticleController {
 
     @Autowired
-    ArticleService articleService;
+    private ArticleService articleService;
 
     /**
      * 首页文章列表
