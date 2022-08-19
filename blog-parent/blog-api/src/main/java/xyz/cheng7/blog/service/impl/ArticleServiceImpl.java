@@ -114,12 +114,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
                     articleVos = recordsToList(hotArticles, false, false);
                     redisValue = JSONUtil.getInstance().toJSON(articleVos);
                     redisTemplate.opsForValue().set(redisKey, redisValue, articleRedisExpireTime, TimeUnit.SECONDS);
-                } else {
-                    log.info("从缓存查询热帖");
-                    articleVos = JSONUtil.getInstance().toObject(redisValue, ArrayList.class);
                 }
             }
-        } else {
+        }
+        if (articleVos == null && redisValue != null) {
             log.info("从缓存查询热帖");
             articleVos = JSONUtil.getInstance().toObject(redisValue, ArrayList.class);
         }
@@ -148,11 +146,26 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
 
     @Override
     public Result findArticleById(Long articleId) {
-        Article article = getArticleById(articleId);
-        if (null == article) {
-            return Result.failure(ErrorCode.ARTICLE_GET_ERROR.getCode(), ErrorCode.ARTICLE_GET_ERROR.getMsg());
+        ArticleVo articleVo = null;
+        String redisKey = RedisUtil.getArticleVo(articleId, true, true, true, true);
+        String redisValue = (String) redisTemplate.opsForValue().get(redisKey);
+        if (null == redisValue) {
+            synchronized (this) {
+                redisValue = (String) redisTemplate.opsForValue().get(redisKey);
+                if (null == redisValue) {
+                    Article article = getArticleById(articleId);
+                    if (null == article) {
+                        return Result.failure(ErrorCode.ARTICLE_GET_ERROR.getCode(), ErrorCode.ARTICLE_GET_ERROR.getMsg());
+                    }
+                    articleVo = pojoToVo(article, true, true, true, true);
+                    redisValue = JSONUtil.getInstance().toJSON(articleVo);
+                    redisTemplate.opsForValue().set(redisKey, redisValue, articleRedisExpireTime, TimeUnit.SECONDS);
+                }
+            }
         }
-        ArticleVo articleVo = pojoToVo(article, true, true, true, true);
+        if (articleVo == null && redisValue != null) {
+            articleVo = JSONUtil.getInstance().toObject(redisValue, ArticleVo.class);
+        }
         /**
          * 查看完文章，新增阅读数
          * 1. 更新阅读数会加写锁，阻塞其他的读操作，降低性能
@@ -161,7 +174,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
          * 2 可以优化，使用线程池
          * 把更新操作放到线程池中执行，不影响主线程返回读到的文章内容
          */
-        threadPoolService.updateArticleViewCount(article, redisTemplate);
+        threadPoolService.updateArticleViewCount(Long.parseLong(articleVo.getId()), redisTemplate);
         Integer viewCounts = articleViewCountsService.getArticleViewCounts(articleId);
         articleVo.setViewCounts(viewCounts);
         return Result.success(articleVo);

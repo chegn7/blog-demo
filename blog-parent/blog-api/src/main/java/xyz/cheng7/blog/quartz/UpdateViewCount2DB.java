@@ -41,7 +41,7 @@ public class UpdateViewCount2DB implements Job {
                 int cnt = articleViewCountsService.updateViewCount(articleId, viewCount);
                 if (cnt == 1) {
                     redisTemplate.delete(key);
-                    deletedKeys.add(key);
+//                    deletedKeys.add(key);
                 } else {
                     throw new Exception();
                 }
@@ -49,7 +49,6 @@ public class UpdateViewCount2DB implements Job {
                 log.error("更新浏览量到数据库失败:" + key);
             }
         }
-        log.info(String.format("更新浏览量的文章id:%s", deletedKeys));
         // 给消息队列发消息，双删
         if (deletedKeys.size() > 0) {
 

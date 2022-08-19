@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import xyz.cheng7.blog.dao.pojo.Article;
 import xyz.cheng7.blog.service.ThreadPoolService;
 import xyz.cheng7.blog.util.RedisUtil;
 @Slf4j
@@ -22,9 +21,9 @@ public class ThreadPoolServiceImpl implements ThreadPoolService {
 
     @Override
     @Async("taskExecutor")
-    public void updateArticleViewCount(Article article, RedisTemplate redisTemplate) {
-        String redisKey = RedisUtil.getArticleViewCount(article.getId());
+    public void updateArticleViewCount(Long articleId, RedisTemplate redisTemplate) {
+        String redisKey = RedisUtil.getArticleViewCount(articleId);
         Long increment = redisTemplate.opsForValue().increment(redisKey);
-        log.info(String.format("更新了阅读数， %s : %s", article.getId(), increment));
+        log.info(String.format("更新了阅读数， %s : %s", articleId, increment));
     }
 }
