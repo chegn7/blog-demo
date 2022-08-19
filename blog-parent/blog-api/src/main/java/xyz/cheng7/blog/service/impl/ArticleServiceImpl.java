@@ -79,6 +79,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
     @Autowired
     private EventProducer producer;
 
+    @Autowired
+    private ArticleScoreService articleScoreService;
+
     @Override
     public List<ArticleVo> listArticle(PageParams pageParams) {
         ArticleSelectParam selectParam = new ArticleSelectParam();
@@ -100,27 +103,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
 
     @Override
     public List<ArticleVo> hotArticle(int limit) {
-        List<ArticleVo> articleVos = null;
-        String redisKey = RedisUtil.getHotArticleIds(limit);
-        String redisValue = (String) redisTemplate.opsForValue().get(redisKey);
-        if (null == redisValue) {
-            synchronized (this) {
-                redisValue = (String) redisTemplate.opsForValue().get(redisKey);
-                if (null == redisValue) {
-                    log.info("从DB查询热帖");
-                    articleVos = new ArrayList<>();
-                    List<Long> ids = articleViewCountsService.getHotArticleId(limit);
-                    for (Long id : ids) {
-                        articleVos.add(getArticleVo(id, false, false, false, false));
-                    }
-                    redisValue = JSONUtil.getInstance().toJSON(articleVos);
-                    redisTemplate.opsForValue().set(redisKey, redisValue, articleRedisExpireTime, TimeUnit.SECONDS);
-                }
-            }
-        }
-        if (articleVos == null && redisValue != null) {
-            log.info("从缓存查询热帖");
-            articleVos = JSONUtil.getInstance().toObject(redisValue, ArrayList.class);
+        List<ArticleVo> articleVos = new ArrayList<>();
+        List<Long> hotIds = articleScoreService.getHotIds(limit);
+        for (Long hotId : hotIds) {
+            articleVos.add(getArticleVo(hotId, false, false, false, false));
         }
         return articleVos;
     }
@@ -179,6 +165,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
         threadPoolService.updateArticleViewCount(Long.parseLong(articleVo.getId()), redisTemplate);
         Integer viewCounts = articleViewCountsService.getArticleViewCounts(articleId);
         articleVo.setViewCounts(viewCounts);
+        redisTemplate.opsForSet().add(RedisUtil.getToBeUpdatedArticleIds(), articleId.toString());
         return Result.success(articleVo);
     }
 

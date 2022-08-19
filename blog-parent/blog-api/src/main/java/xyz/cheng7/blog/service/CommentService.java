@@ -18,4 +18,6 @@ public interface CommentService extends IService<Comment> {
     List<CommentVo> findComments(Long articleId);
 
     Result createComment(CommentParam commentParam);
+
+    Integer getCommentCounts(Long articleId);
 }

@@ -6,11 +6,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.quartz.JobDetailFactoryBean;
 import org.springframework.scheduling.quartz.SimpleTriggerFactoryBean;
+import xyz.cheng7.blog.quartz.UpdateArticleScore;
 import xyz.cheng7.blog.quartz.UpdateViewCount2DB;
 
 // 配置 -> 数据库 -> 调用
 @Configuration
 public class QuartzConfig {
+    private static long UPDATE_VIEW_COUNTS_INTERVAL = 1 * 1000 * 10;
+    private static long UPDATE_ARTICLE_SCORE_INTERVAL = 1 * 1000 * 10;
+
 
     // FactoryBean 可简化Bean的实例化过程
     // 1. 通过 FactoryBean 封装Bean的实例化过程
@@ -59,9 +63,31 @@ public class QuartzConfig {
         factoryBean.setName("updateViewCountTrigger");
         factoryBean.setGroup("blogJobGroup");
         factoryBean.setJobDataMap(new JobDataMap());
-        factoryBean.setRepeatInterval(1 * 1000 * 10);
+        factoryBean.setRepeatInterval(UPDATE_VIEW_COUNTS_INTERVAL);
         return factoryBean;
     }
 
     //    CronTriggerFactoryBean 复杂定时任务
+
+    @Bean
+    public JobDetailFactoryBean updateArticleScoreDetail() {
+        JobDetailFactoryBean factoryBean = new JobDetailFactoryBean();
+        factoryBean.setJobClass(UpdateArticleScore.class);
+        factoryBean.setName("updateArticleScoreJob");
+        factoryBean.setGroup("blogJobGroup");
+        factoryBean.setDurability(true);
+        factoryBean.setRequestsRecovery(true);
+        return factoryBean;
+    }
+
+    @Bean
+    public SimpleTriggerFactoryBean updateArticleScoreTrigger(JobDetail updateArticleScoreDetail) {
+        SimpleTriggerFactoryBean factoryBean = new SimpleTriggerFactoryBean();
+        factoryBean.setJobDetail(updateArticleScoreDetail);
+        factoryBean.setName("updateArticleScoreTrigger");
+        factoryBean.setGroup("blogJobGroup");
+        factoryBean.setJobDataMap(new JobDataMap());
+        factoryBean.setRepeatInterval(UPDATE_ARTICLE_SCORE_INTERVAL);
+        return factoryBean;
+    }
 }

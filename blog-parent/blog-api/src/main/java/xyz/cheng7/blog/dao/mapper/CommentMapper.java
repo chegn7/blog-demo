@@ -23,6 +23,8 @@ public interface CommentMapper extends BaseMapper<Comment> {
     List<Comment> selectCommentByIds(@Param("articleId") Long articleId, @Param("parentId") Long parentId);
 
     int insertComment(Comment comment);
+
+    Integer selectCommentCountsByArticleId(Long articleId);
 }
 
 

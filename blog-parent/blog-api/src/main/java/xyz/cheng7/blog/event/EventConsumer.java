@@ -40,6 +40,9 @@ public class EventConsumer {
     public void handleCommentCreateEvent(ConsumerRecord record) {
         Event event = preprocessRecord(record);
         if (null == event) return;
+        String scoreKey = RedisUtil.getToBeUpdatedArticleIds();
+        String articleIdStr = (String) event.getData().get("articleId");
+        redisTemplate.opsForSet().add(scoreKey, articleIdStr);
     }
 
     @KafkaListener(topics = {EventTopic.PUBLISH_ARTICLE})
@@ -77,6 +80,8 @@ public class EventConsumer {
                 rLock.unlock();
             }
         }
+        String scoreKey = RedisUtil.getToBeUpdatedArticleIds();
+        redisTemplate.opsForSet().add(scoreKey, event.getEntityId().toString());
     }
 
     private Event preprocessRecord(ConsumerRecord record) {

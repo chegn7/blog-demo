@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xyz.cheng7.blog.dao.mapper.ArticleScoreMapper">
+
+    <resultMap id="BaseResultMap" type="xyz.cheng7.blog.dao.pojo.ArticleScore">
+        <id property="artilceId" column="artilce_id" jdbcType="BIGINT"/>
+        <result property="score" column="score" jdbcType="DOUBLE"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        artilce_id,score
+    </sql>
+    <insert id="insertArticleScore">
+        insert into ms_article_score (artilce_id, score)
+        values (#{artilceId}, #{score});
+    </insert>
+    <update id="updateArticleScore">
+        update ms_article_score
+        set score = #{score}
+        where artilce_id = #{artilceId}
+    </update>
+    <select id="selectHot" parameterType="int" resultType="xyz.cheng7.blog.dao.pojo.ArticleScore">
+        select artilce_id, score
+        from ms_article_score
+        order by score desc
+        limit #{limit}
+    </select>
+    <select id="selectByArticleId" parameterType="long" resultType="xyz.cheng7.blog.dao.pojo.ArticleScore">
+        select artilce_id, score
+        from ms_article_score
+        where artilce_id = #{articleId}
+    </select>
+</mapper>

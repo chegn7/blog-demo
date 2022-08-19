@@ -7,7 +7,6 @@ import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import xyz.cheng7.blog.event.EventProducer;
 import xyz.cheng7.blog.service.ArticleViewCountsService;
 import xyz.cheng7.blog.util.MyCollectionUtil;
 import xyz.cheng7.blog.util.RedisUtil;
@@ -23,9 +22,6 @@ public class UpdateViewCount2DB implements Job {
 
     @Autowired
     private ArticleViewCountsService articleViewCountsService;
-
-    @Autowired
-    private EventProducer eventProducer;
 
     @Override
     public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {

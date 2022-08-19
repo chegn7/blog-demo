@@ -15,6 +15,10 @@ public class RedisUtil {
         return String.join(SPLIT, "article", "hotIds", String.valueOf(limit));
     }
 
+    public static String getHotArticleIds() {
+        return String.join(SPLIT, "article", "hotIds");
+    }
+
     public static String getArticleAbstract(Long articleId) {
         return String.join(SPLIT, "article", "abstract", articleId.toString());
     }
@@ -56,5 +60,9 @@ public class RedisUtil {
 
     public static String getDeleteNewIdLock() {
         return String.join(SPLIT, "lock", "delete", "articleId", "new");
+    }
+
+    public static String getToBeUpdatedArticleIds() {
+        return String.join(SPLIT, "article", "ids", "toBeUpdated");
     }
 }

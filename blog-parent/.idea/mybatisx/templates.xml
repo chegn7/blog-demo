@@ -15,7 +15,7 @@
             <option name="ignoreFieldSuffix" value="" />
             <option name="ignoreTablePrefix" value="ms_" />
             <option name="ignoreTableSuffix" value="" />
-            <option name="moduleName" value="blog-api" />
+            <option name="moduleName" value="blog-admin" />
             <option name="modulePath" value="$PROJECT_DIR$/blog-api" />
             <option name="moduleUIInfoList">
               <list>
@@ -63,8 +63,8 @@
             <option name="tableUIInfoList">
               <list>
                 <TableUIInfo>
-                  <option name="className" value="ArticleViewCounts" />
-                  <option name="tableName" value="ms_article_view_counts" />
+                  <option name="className" value="ArticleScore" />
+                  <option name="tableName" value="ms_article_score" />
                 </TableUIInfo>
               </list>
             </option>
@@ -72,7 +72,7 @@
             <option name="useLombokPlugin" value="true" />
           </GenerateConfig>
         </option>
-        <option name="moduleName" value="blog-api" />
+        <option name="moduleName" value="blog-admin" />
         <option name="projectPath" value="$PROJECT_DIR$" />
         <option name="templateName" value="mybatis-plus3" />
       </TemplateContext>

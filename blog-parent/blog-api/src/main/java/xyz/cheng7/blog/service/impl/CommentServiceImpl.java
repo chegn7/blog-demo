@@ -5,17 +5,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import xyz.cheng7.blog.dao.Event;
 import xyz.cheng7.blog.dao.mapper.CommentMapper;
 import xyz.cheng7.blog.dao.pojo.Comment;
+import xyz.cheng7.blog.event.EventProducer;
 import xyz.cheng7.blog.service.CommentService;
 import xyz.cheng7.blog.service.SysUserService;
 import xyz.cheng7.blog.util.IDUtil;
 import xyz.cheng7.blog.util.TimeUtil;
 import xyz.cheng7.blog.util.UserThreadLocal;
-import xyz.cheng7.blog.vo.CommentVo;
-import xyz.cheng7.blog.vo.ErrorCode;
-import xyz.cheng7.blog.vo.Result;
-import xyz.cheng7.blog.vo.SysUserVo;
+import xyz.cheng7.blog.vo.*;
 import xyz.cheng7.blog.vo.params.CommentParam;
 
 import java.util.ArrayList;
@@ -43,6 +42,9 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
     @Autowired
     private RedisTemplate redisTemplate;
 
+    @Autowired
+    private EventProducer producer;
+
     @Override
     public List<CommentVo> findComments(Long articleId) {
         List<Comment> parents = null;
@@ -66,8 +68,20 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
         if (null == comment)
             return Result.failure(ErrorCode.NOT_LOGIN_ERROR.getCode(), ErrorCode.NOT_LOGIN_ERROR.getMsg());
         int i = commentMapper.insertComment(comment);
-        if (i == 1) return Result.success(null);
-        else return Result.failure(ErrorCode.COMMENT_CREATE_ERROR.getCode(), ErrorCode.COMMENT_CREATE_ERROR.getMsg());
+        if (i == 1) {
+            Event event = new Event()
+                    .setTopic(EventTopic.CREATE_COMMENT)
+                    .setCreatorId(comment.getAuthorId())
+                    .setEntityId(comment.getId())
+                    .setData("articleId", comment.getArticleId().toString());
+            producer.fireEvent(event);
+            return Result.success(null);
+        } else return Result.failure(ErrorCode.COMMENT_CREATE_ERROR.getCode(), ErrorCode.COMMENT_CREATE_ERROR.getMsg());
+    }
+
+    @Override
+    public Integer getCommentCounts(Long articleId) {
+        return commentMapper.selectCommentCountsByArticleId(articleId);
     }
 
     private Comment convertToComment(CommentParam commentParam) {
