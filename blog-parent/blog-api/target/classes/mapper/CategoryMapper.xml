@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xyz.cheng7.blog.dao.mapper.CategoryMapper">
+
+    <resultMap id="BaseResultMap" type="xyz.cheng7.blog.dao.pojo.Category">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="avatar" column="avatar" jdbcType="VARCHAR"/>
+        <result property="categoryName" column="category_name" jdbcType="VARCHAR"/>
+        <result property="description" column="description" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,avatar,category_name,
+        description
+    </sql>
+    <select id="selectByCategoryId" parameterType="long" resultType="xyz.cheng7.blog.dao.pojo.Category">
+        select id, avatar, category_name, description
+        from ms_category
+        where id = #{categoryId}
+    </select>
+    <select id="selectCategories" resultType="xyz.cheng7.blog.dao.pojo.Category">
+        select id, avatar, category_name, description
+        from ms_category
+    </select>
+</mapper>

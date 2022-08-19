@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xyz.cheng7.blog.dao.mapper.ArticleMapper">
+
+    <resultMap id="BaseResultMap" type="xyz.cheng7.blog.dao.pojo.Article">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="commentCounts" column="comment_counts" jdbcType="INTEGER"/>
+        <result property="createDate" column="create_date" jdbcType="BIGINT"/>
+        <result property="summary" column="summary" jdbcType="VARCHAR"/>
+        <result property="title" column="title" jdbcType="VARCHAR"/>
+        <result property="viewCounts" column="view_counts" jdbcType="INTEGER"/>
+        <result property="weight" column="weight" jdbcType="INTEGER"/>
+        <result property="authorId" column="author_id" jdbcType="BIGINT"/>
+        <result property="bodyId" column="body_id" jdbcType="BIGINT"/>
+        <result property="categoryId" column="category_id" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,comment_counts,create_date,
+        summary,title,view_counts,
+        weight,author_id,body_id,
+        category_id
+    </sql>
+    <update id="updateViewCounts">
+        update ms_article
+        set view_counts = #{updatedCounts}
+        where id = #{articleId}
+          and view_counts = #{originCounts}
+    </update>
+    <select id="selectHotArticle" parameterType="int" resultType="xyz.cheng7.blog.dao.pojo.Article">
+        select id
+        from ms_article
+        order by view_counts desc
+        limit #{limit}
+    </select>
+    <select id="selectNewArticle" parameterType="int" resultType="xyz.cheng7.blog.dao.pojo.Article">
+        select id,
+               comment_counts,
+               create_date,
+               summary,
+               title,
+               view_counts,
+               weight,
+               author_id,
+               body_id,
+               category_id
+        from ms_article
+        order by create_date desc
+        limit #{limit}
+    </select>
+    <select id="listArchives" resultType="xyz.cheng7.blog.dao.dos.Archives">
+        SELECT YEAR
+                   (
+                       FROM_UNIXTIME(create_date / 1000)) AS year,
+               MONTH(
+                       FROM_UNIXTIME(create_date / 1000)) AS month,
+               count(id)                                  AS count
+        FROM ms_article
+        GROUP BY year,
+                 month
+    </select>
+    <select id="countArticle" resultType="java.lang.Integer">
+        select count(id)
+        from ms_article
+        <where>
+            1 = 1
+            <if test="articleId != null">
+                and id = #{articleId}
+            </if>
+            <if test="categoryId != null">
+                and category_id = #{categoryId}
+            </if>
+            <if test="tagId != null">
+                and id in (
+                SELECT article_id FROM ms_article_tag WHERE tag_id = #{tagId}
+                )
+            </if>
+            <if test="startTime != null and endTime != null">
+                and (create_date BETWEEN #{startTime} and #{endTime})
+            </if>
+        </where>
+    </select>
+    <select id="selectArticle" resultType="xyz.cheng7.blog.dao.pojo.Article">
+        select id, comment_counts, create_date, summary, title, view_counts, weight, author_id, body_id, category_id
+        from ms_article
+        <where>
+            1 = 1
+            <if test="articleId != null">
+                and id = #{articleId}
+            </if>
+            <if test="categoryId != null">
+                and category_id = #{categoryId}
+            </if>
+            <if test="tagId != null">
+                and id in (
+                SELECT article_id FROM ms_article_tag WHERE tag_id = #{tagId}
+                )
+            </if>
+            <if test="startTime != null and endTime != null">
+                and (create_date BETWEEN #{startTime} and #{endTime})
+            </if>
+        </where>
+        order by create_date desc, weight desc
+        <if test="limit != null and offset != null">
+            limit #{limit} offset #{offset}
+        </if>
+    </select>
+</mapper>

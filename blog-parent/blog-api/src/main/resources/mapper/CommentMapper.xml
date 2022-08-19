@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xyz.cheng7.blog.dao.mapper.CommentMapper">
+
+    <resultMap id="BaseResultMap" type="xyz.cheng7.blog.dao.pojo.Comment">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="content" column="content" jdbcType="VARCHAR"/>
+        <result property="createDate" column="create_date" jdbcType="BIGINT"/>
+        <result property="articleId" column="article_id" jdbcType="INTEGER"/>
+        <result property="authorId" column="author_id" jdbcType="BIGINT"/>
+        <result property="parentId" column="parent_id" jdbcType="BIGINT"/>
+        <result property="toUid" column="to_uid" jdbcType="BIGINT"/>
+        <result property="level" column="level" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,content,create_date,
+        article_id,author_id,parent_id,
+        to_uid,level
+    </sql>
+    <insert id="insertComment">
+        insert into ms_comment (id, content, create_date, article_id, author_id, parent_id, to_uid, level)
+        values (#{id}, #{content}, #{createDate}, #{articleId}, #{authorId}, #{parentId}, #{toUid}, #{level});
+    </insert>
+
+
+    <select id="selectCommentByArticleId" parameterType="long" resultType="xyz.cheng7.blog.dao.pojo.Comment">
+        select id,
+               content,
+               create_date,
+               article_id,
+               author_id,
+               parent_id,
+               to_uid,
+               level
+        from ms_comment
+        where article_id = #{articleId}
+    </select>
+    <select id="selectParentCommentByArticleId" parameterType="long" resultType="xyz.cheng7.blog.dao.pojo.Comment">
+        select id,
+               content,
+               create_date,
+               article_id,
+               author_id,
+               parent_id,
+               to_uid,
+               level
+        from ms_comment
+        where article_id = #{articleId}
+          and parent_id = '0'
+        order by create_date asc
+    </select>
+    <select id="selectCommentByIds" parameterType="long" resultType="xyz.cheng7.blog.dao.pojo.Comment">
+        select id,
+               content,
+               create_date,
+               article_id,
+               author_id,
+               parent_id,
+               to_uid,
+               level
+        from ms_comment
+        where article_id = #{articleId}
+          and parent_id = #{parentId}
+        order by create_date asc
+    </select>
+
+</mapper>

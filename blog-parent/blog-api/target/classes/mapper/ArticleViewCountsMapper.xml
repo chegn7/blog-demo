@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xyz.cheng7.blog.dao.mapper.ArticleViewCountsMapper">
+
+    <resultMap id="BaseResultMap" type="xyz.cheng7.blog.dao.pojo.ArticleViewCounts">
+        <id property="articleId" column="article_id" jdbcType="BIGINT"/>
+        <result property="viewCounts" column="view_counts" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        article_id,view_counts
+    </sql>
+    <insert id="insertArticleViewCount">
+        insert into ms_article_view_counts (article_id, view_counts)
+        values (#{articleId}, #{viewCounts})
+    </insert>
+    <update id="updateViewCountsInt">
+        update ms_article_view_counts
+        set view_counts = #{viewCounts}
+        where article_id = #{articleId}
+    </update>
+    <select id="selectHotId" parameterType="int" resultType="java.lang.Long">
+        select article_id
+        from ms_article_view_counts
+        order by view_counts desc
+        limit #{limit}
+    </select>
+    <select id="selectByArticleId" parameterType="long" resultType="xyz.cheng7.blog.dao.pojo.ArticleViewCounts">
+        select article_id, view_counts
+        from ms_article_view_counts
+        where article_id = #{articleId}
+    </select>
+</mapper>

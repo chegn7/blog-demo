@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xyz.cheng7.blog.admin.mapper.PermissionMapper">
+
+    <resultMap id="BaseResultMap" type="xyz.cheng7.blog.admin.pojo.Permission">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="path" column="path" jdbcType="VARCHAR"/>
+        <result property="description" column="description" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,name,path,
+        description
+    </sql>
+    <select id="selectByUserId" parameterType="long" resultType="xyz.cheng7.blog.admin.pojo.Permission">
+        select id, name, path, description
+        from ms_permission
+        where id in (select permission_id from ms_admin_permission where admin_id = #{userId})
+    </select>
+</mapper>

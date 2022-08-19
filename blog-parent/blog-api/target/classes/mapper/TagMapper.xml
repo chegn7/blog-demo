@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xyz.cheng7.blog.dao.mapper.TagMapper">
+
+    <resultMap id="BaseResultMap" type="xyz.cheng7.blog.dao.pojo.Tag">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="avatar" column="avatar" jdbcType="VARCHAR"/>
+        <result property="tagName" column="tag_name" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,avatar,tag_name
+    </sql>
+
+    <select id="findTagsByArticleId" parameterType="long" resultType="xyz.cheng7.blog.dao.pojo.Tag">
+        select id, avatar, tag_name
+        from ms_tag
+        where id in (select tag_id from ms_article_tag WHERE article_id = #{articleId})
+    </select>
+
+    <select id="findHotTagIds" parameterType="int" resultType="java.lang.Long">
+        SELECT tag_id
+        FROM ms_article_tag
+        GROUP BY tag_id
+        ORDER BY count(article_id) DESC
+        LIMIT #{limit}
+    </select>
+    <!--List<Tag> selectListByIds(List<Long> hotTagIds)-->
+    <select id="selectListByIds" parameterType="list" resultType="xyz.cheng7.blog.dao.pojo.Tag">
+        select id, avatar, tag_name
+        from ms_tag
+        where id in
+        <foreach collection="hotTagIds" item="tagId" separator="," open="(" close=")">
+            #{tagId}
+        </foreach>
+    </select>
+    <select id="selectAllTags" resultType="xyz.cheng7.blog.dao.pojo.Tag">
+        select id, avatar, tag_name
+        from ms_tag
+    </select>
+    <select id="findTagByTagId" resultType="xyz.cheng7.blog.vo.TagVo" parameterType="long">
+        select id, avatar, tag_name
+        from ms_tag
+        where id = #{tagId}
+    </select>
+
+
+</mapper>
