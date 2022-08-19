@@ -1,6 +1,7 @@
 package xyz.cheng7.blog.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,10 +18,7 @@ import xyz.cheng7.blog.dao.pojo.ArticleTag;
 import xyz.cheng7.blog.dao.pojo.Category;
 import xyz.cheng7.blog.event.EventProducer;
 import xyz.cheng7.blog.service.*;
-import xyz.cheng7.blog.util.IDUtil;
-import xyz.cheng7.blog.util.PageUtil;
-import xyz.cheng7.blog.util.TimeUtil;
-import xyz.cheng7.blog.util.UserThreadLocal;
+import xyz.cheng7.blog.util.*;
 import xyz.cheng7.blog.vo.*;
 import xyz.cheng7.blog.vo.params.ArticleBodyParam;
 import xyz.cheng7.blog.vo.params.ArticleParam;
@@ -30,6 +28,7 @@ import xyz.cheng7.blog.vo.params.PageParams;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author c
@@ -37,6 +36,7 @@ import java.util.List;
  * @createDate 2022-08-08 15:02:19
  */
 @Service
+@Slf4j
 public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
         implements ArticleService {
 
@@ -98,12 +98,32 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
 
     @Override
     public List<ArticleVo> hotArticle(int limit) {
-        List<Article> hotArticles = new ArrayList<>();
-        List<Long> ids = articleViewCountsService.getHotArticleId(limit);
-        for (Long id : ids) {
-            hotArticles.add(getArticleById(id));
+        List<ArticleVo> articleVos = null;
+        String redisKey = RedisUtil.getHotArticleIds(limit);
+        String redisValue = (String) redisTemplate.opsForValue().get(redisKey);
+        if (null == redisValue) {
+            synchronized (this) {
+                redisValue = (String) redisTemplate.opsForValue().get(redisKey);
+                if (null == redisValue) {
+                    log.info("从DB查询热帖");
+                    List<Article> hotArticles = new ArrayList<>();
+                    List<Long> ids = articleViewCountsService.getHotArticleId(limit);
+                    for (Long id : ids) {
+                        hotArticles.add(getArticleById(id));
+                    }
+                    articleVos = recordsToList(hotArticles, false, false);
+                    redisValue = JSONUtil.getInstance().toJSON(articleVos);
+                    redisTemplate.opsForValue().set(redisKey, redisValue, articleRedisExpireTime, TimeUnit.SECONDS);
+                } else {
+                    log.info("从缓存查询热帖");
+                    articleVos = JSONUtil.getInstance().toObject(redisValue, ArrayList.class);
+                }
+            }
+        } else {
+            log.info("从缓存查询热帖");
+            articleVos = JSONUtil.getInstance().toObject(redisValue, ArrayList.class);
         }
-        return recordsToList(hotArticles, false, false);
+        return articleVos;
     }
 
 
@@ -114,7 +134,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
         if (CollectionUtils.isEmpty(newArticles)) {
             return Collections.emptyList();
         }
-
         return recordsToList(newArticles, false, false);
     }
 
