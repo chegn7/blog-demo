@@ -2,6 +2,7 @@ package xyz.cheng7.blog.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -11,15 +12,14 @@ import xyz.cheng7.blog.dao.pojo.Comment;
 import xyz.cheng7.blog.event.EventProducer;
 import xyz.cheng7.blog.service.CommentService;
 import xyz.cheng7.blog.service.SysUserService;
-import xyz.cheng7.blog.util.IDUtil;
-import xyz.cheng7.blog.util.TimeUtil;
-import xyz.cheng7.blog.util.UserThreadLocal;
+import xyz.cheng7.blog.util.*;
 import xyz.cheng7.blog.vo.*;
 import xyz.cheng7.blog.vo.params.CommentParam;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author c
@@ -45,20 +45,34 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
     @Autowired
     private EventProducer producer;
 
+    @Value("${redis.article.default-expire-time}")
+    private Long articleRedisExpireTime;
+
     @Override
     public List<CommentVo> findComments(Long articleId) {
-        List<Comment> parents = null;
         List<CommentVo> commentVos = null;
-        // parentId 为0 即为直接对文章的评论
-        parents = commentMapper.selectCommentByIds(articleId, 0L);
-        if (null == parents) {
-            return Collections.emptyList();
+        String redisKey = RedisUtil.getArticleComments(articleId);
+        String redisValue = (String) redisTemplate.opsForValue().get(redisKey);
+        if (redisValue == null) {
+            synchronized (this) {
+                redisValue = (String) redisTemplate.opsForValue().get(redisKey);
+                if (redisValue == null) {
+                    commentVos = new ArrayList<>();
+                    List<Comment> parents = null;
+                    // parentId 为0 即为直接对文章的评论
+                    parents = commentMapper.selectCommentByIds(articleId, 0L);
+                    commentVos = new ArrayList<>();
+                    if (parents != null) {
+                        for (Comment parent : parents) {
+                            commentVos.add(findChildren(convertToCommentVo(parent), articleId));
+                        }
+                    }
+                    redisValue = JSONUtil.getInstance().toJSON(commentVos);
+                    redisTemplate.opsForValue().set(redisKey, redisValue, articleRedisExpireTime, TimeUnit.SECONDS);
+                }
+            }
         }
-        commentVos = new ArrayList<>();
-        for (Comment parent : parents) {
-            commentVos.add(findChildren(convertToCommentVo(parent), articleId));
-        }
-
+        if (commentVos == null && redisValue != null) commentVos = JSONUtil.getInstance().toObject(redisValue, ArrayList.class);
         return commentVos;
     }
 

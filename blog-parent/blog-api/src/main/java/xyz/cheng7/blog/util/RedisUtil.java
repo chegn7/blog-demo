@@ -65,4 +65,8 @@ public class RedisUtil {
     public static String getToBeUpdatedArticleIds() {
         return String.join(SPLIT, "article", "ids", "toBeUpdated");
     }
+
+    public static String getArticleComments(Long articleId) {
+        return String.join(SPLIT, "article", "commentVos", articleId.toString());
+    }
 }

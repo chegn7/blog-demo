@@ -43,6 +43,8 @@ public class EventConsumer {
         String scoreKey = RedisUtil.getToBeUpdatedArticleIds();
         String articleIdStr = (String) event.getData().get("articleId");
         redisTemplate.opsForSet().add(scoreKey, articleIdStr);
+        String redisKey = RedisUtil.getArticleComments(Long.valueOf(articleIdStr));
+        redisTemplate.delete(redisKey);
     }
 
     @KafkaListener(topics = {EventTopic.PUBLISH_ARTICLE})
