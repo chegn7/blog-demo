@@ -20,5 +20,4 @@ public class UserThreadLocal {
     public static void remove() {
         SYS_USER_THREAD_LOCAL.remove();
     }
-
 }
